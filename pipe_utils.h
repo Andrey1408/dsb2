@@ -11,6 +11,8 @@ typedef struct
     local_id size;
     int **reader;
     int **writer;
+    BalanceState state;
+    BalanceHistory history;
 } pipe_ut;
 
 void create_pipes( pipe_ut* proc, FILE *pipes_log_file );
