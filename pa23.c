@@ -95,11 +95,21 @@ void transfer_process(pipe_ut* pp, Message* msg)
     }
 }
 
+void child_stopping(pipe_ut* pp, const int* processes_left_counter){
+    Message msg = create_message(DONE, NULL, 0);
+    send_multicast((void*) pp, &msg);
+    close_write_pipe_ends_for_writers(pp);
+    int i = *processes_left_counter;
+
+    while(i < pp->size - 2) {
+
+    }
+}
+
 void child_work(pipe_ut* pp) 
 {
     Message msg = create_message(STARTED, NULL, 0);
     send(pp, PARENT_ID,  &msg);
-    timestamp_t end_time = 0;
     int i = 0;
     while (i < pp->size - 2) {
         Message msg;
@@ -110,18 +120,18 @@ void child_work(pipe_ut* pp)
         case TRANSFER:
             pp->state.s_time = get_physical_time();
             transfer_process(pp, &msg);
-            break;
+            continue;
         case STOP:
-            Message msg = create_message(DONE, NULL, 0);
-            send_multicast(pp, &msg);
+            child_stopping(&pp, &i);
             break;
         case DONE:
             i++;
-            break;
+            continue;
         default:
-            break;
+            continue;
         }
     }
+    timestamp_t end_time = get_physical_time();
     pp->state = pp->history.s_history[pp->history.s_history_len-1];
     pp->state.s_time = end_time;
     balance_history(&(pp->history), pp->state);
