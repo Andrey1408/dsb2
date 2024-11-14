@@ -56,65 +56,24 @@ void create_pipes(pipe_ut *proc, FILE *pipes_log_file)
     }
 }
 
-void close_write_pipe_ends_for_readers(pipe_ut *proc)
+void close_write_pipe_ends(pipe_ut *proc)
 {
-    for (local_id i = 0; i < proc->size; i++)
+    for (local_id j = 0; j < proc->size; j++)
     {
-        for (local_id j = 0; j < proc->size; j++)
+        if (proc->cur_id != j)
         {
-            if (i != proc->cur_id && i != j)
-            {
-                close(proc->reader[i][j][1]);
-            }
+            close(proc->pipes[proc->cur_id][j][1]);
         }
     }
 }
 
-void close_read_pipe_ends_for_readers(pipe_ut *proc)
+void close_read_pipe_ends(pipe_ut *proc)
 {
-    for (local_id i = 0; i < proc->size; i++)
+    for (local_id j = 0; j < proc->size; j++)
     {
-        for (local_id j = 0; j < proc->size; j++)
+        if (proc->cur_id != j)
         {
-            if (i != proc->cur_id && i != j)
-            {
-                close(proc->reader[i][j][0]);
-            }
+            close(proc->pipes[proc->cur_id][j][0]);
         }
     }
-}
-
-void close_write_pipe_ends_for_writers(pipe_ut *proc)
-{
-    for (local_id i = 0; i < proc->size; i++)
-    {
-        for (local_id j = 0; j < proc->size; j++)
-        {
-            if (i != proc->cur_id && i != j)
-            {
-                close(proc->writer[i][j][1]);
-            }
-        }
-    }
-}
-
-void close_read_pipe_ends_for_writers(pipe_ut *proc)
-{
-    for (local_id i = 0; i < proc->size; i++)
-    {
-        for (local_id j = 0; j < proc->size; j++)
-        {
-            if (i != proc->cur_id && i != j)
-            {
-                close(proc->writer[i][j][0]);
-            }
-        }
-    }
-}
-void close_unused_pipes(pipe_ut *proc)
-{
-    close_write_pipe_ends_for_readers(&proc);
-    close_write_pipe_ends_for_writers(&proc);
-    close_read_pipe_ends_for_readers(&proc);
-    close_read_pipe_ends_for_writers(&proc);
 }
