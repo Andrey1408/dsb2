@@ -38,7 +38,7 @@ void close_write_pipe_ends(pipe_ut *proc)
     {
         if (proc->cur_id != j)
         {
-            close(proc->pipes[proc->cur_id][j][1]);
+            close(proc->recepients[proc->cur_id][j][1]);
         }
     }
 }
@@ -49,7 +49,7 @@ void close_read_pipe_ends(pipe_ut *proc)
     {
         if (proc->cur_id != j)
         {
-            close(proc->pipes[proc->cur_id][j][0]);
+            close(proc->recepients[proc->cur_id][j][0]);
         }
     }
 }
