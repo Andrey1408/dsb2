@@ -19,13 +19,7 @@ void transfer(void * parent_data, local_id src, local_id dst,
 
     Message message = create_message(TRANSFER, (void*) &trnsfr, sizeof(trnsfr));
 
-    while (1) {
-        if (send(parent_data, src, &message ) == -1) {
-            continue;
-        } else {
-            break;
-        }
-    }
+    send(parent_data, src, &message);
 
     log_transfer_out(&trnsfr);
 
@@ -130,7 +124,7 @@ void child_work(pipe_ut* pp)
     }
     pp->state = pp->history.s_history[pp->history.s_history_len-1];
     pp->state.s_time = end_time;
-    add_balance_state_to_history(&(pp->history), pp->state);
+    balance_history(&(pp->history), pp->state);
     log_done(pp);
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
     Message msg_to_p = create_message(BALANCE_HISTORY, &pp->history, p_size);
