@@ -1,8 +1,8 @@
+#include "ipc.h"
+#include "pipe_utils.h"
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
-#include "ipc.h"
-#include "pipe_utils.h"
 
 int send(void *self, local_id dst, const Message *msg)
 {
@@ -56,11 +56,7 @@ int receive_any(void *self, Message *msg)
             {
                 if (receive(self, i, msg) == 1)
                 {
-                    continue;
-                }
-                else
-                {
-                    return 0;
+                    continue;    
                 }
             }
         }

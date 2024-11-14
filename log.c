@@ -1,9 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "pa2345.h"
-#include "common.h"
+
 #include "log.h"
 
 static const char *const log_pipe_open_fmt = "Pipe from process %d to %d was opened| %d %d\n";

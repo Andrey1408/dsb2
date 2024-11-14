@@ -6,6 +6,19 @@
 #include "log.h"
 #include "banking.h"
 
+Message create_message(MessageType type, void *contents, uint16_t size)
+{
+    Message msg;
+
+    msg.s_header.s_magic = MESSAGE_MAGIC;
+    msg.s_header.s_type = type;
+    msg.s_header.s_local_time = get_physical_time();
+    msg.s_header.s_payload_len = size;
+    memcpy(&(msg.s_payload), contents, size);
+
+    return msg;
+}
+
 void transfer(void *parent_data, local_id src, local_id dst,
               balance_t amount)
 {
@@ -65,19 +78,6 @@ void wait_messages(pipe_ut *pp, MessageType status)
     }
 }
 
-Message create_message(MessageType type, void *contents, uint16_t size)
-{
-    Message msg;
-
-    msg.s_header.s_magic = MESSAGE_MAGIC;
-    msg.s_header.s_type = type;
-    msg.s_header.s_local_time = get_physical_time();
-    msg.s_header.s_payload_len = size;
-    memcpy(&(msg.s_payload), contents, size);
-
-    return msg;
-}
-
 void transfer_process(pipe_ut *pp, Message *msg)
 {
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
@@ -110,7 +110,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter)
             int status = receive(pp, id, &msg);
             if (status == 0)
             {
-                switch (msg.s_headr.s_type)
+                switch (msg.s_header.s_type)
                 {
                 case DONE:
                     i++;
@@ -126,13 +126,13 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter)
             }
         }
     }
-    Message msg = create_message(DONE, NULL, 0);
+    msg = create_message(DONE, NULL, 0);
     send_multicast((void *)pp, &msg);
     timestamp_t end_time = get_physical_time();
     pp->state = pp->history.s_history[pp->history.s_history_len - 1];
     pp->state.s_time = end_time;
     balance_history(&(pp->history), pp->state);
-    log_done(pp);
+    log_done(pp->cur_id);
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
     msg = create_message(BALANCE_HISTORY, &pp->history, p_size);
     send(pp, PARENT_ID, &msg);
@@ -155,7 +155,7 @@ void child_work(pipe_ut *pp)
             transfer_process(pp, &msg);
             continue;
         case STOP:
-            child_stopping(&pp, &i);
+            child_stopping(pp, &i);
             break;
         case DONE:
             i++;
