@@ -46,7 +46,7 @@ void transfer(void * parent_data, local_id src, local_id dst,
 void balance_history (BalanceHistory* history, BalanceState state) {
     
     if (state.s_time >= history->s_history_len -1) {
-        for( timestamp_t t = history->s_history_len; t < state.s_time; t++ ) {
+        for ( timestamp_t t = history->s_history_len; t < state.s_time; t++ ) {
             history->s_history[t] = history->s_history[t-1];
             history->s_history[t].s_time = t;
         }
@@ -91,31 +91,56 @@ Message create_message ( MessageType type, void* contents, uint16_t size )
     return msg;
 }
 
+void transfer_process(pipe_ut* pp, Message* msg) 
+{
+    TransferOrder* trnsfr = (TransferOrder*)msg->s_payload;
+    if (pp->cur_id == trnsfr->s_dst) {
+        pp->state.s_balance += trnsfr->s_amount;
+        balance_history(&(pp->history), pp->state);
+        send(pp, trnsfr->s_dst, msg);
+    }
+    if (pp->cur_id == trnsfr->s_src) {
+        pp->state.s_balance -= trnsfr->s_amount;
+        balance_history(&(pp->history), pp->state);
+        Message msg = create_message(ACK, NULL, 0);
+        send(pp, PARENT_ID, &msg);
+    }
+}
 
 void child_work(pipe_ut* pp) 
 {
-    Message msg = create_message(STARTED, pp, 0);
+    Message msg = create_message(STARTED, NULL, 0);
     send(pp, PARENT_ID,  &msg);
     timestamp_t end_time = 0;
-
-    for (int i = 0; i < pp->size; i++) {
+    int i = 0;
+    while (i < pp->size - 2) {
         Message msg;
         receive_any(pp, &msg);
 
         switch (msg.s_header.s_type)
         {
         case TRANSFER:
+            pp->state.s_time = get_physical_time();
+            transfer_process(pp, &msg);
             break;
         case STOP:
+            Message msg = create_message(DONE, NULL, 0);
+            send_multicast(pp, &msg);
             break;
         case DONE:
+            i++;
             break;
         default:
             break;
         }
     }
-   
-
+    pp->state = pp->history.s_history[pp->history.s_history_len-1];
+    pp->state.s_time = end_time;
+    add_balance_state_to_history(&(pp->history), pp->state);
+    log_done(pp);
+    uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
+    Message msg_to_p = create_message(BALANCE_HISTORY, &pp->history, p_size);
+    send(pp, PARENT_ID, &msg_to_p);
 }
 
 int main(int argc, char * argv[])
