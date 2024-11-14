@@ -250,6 +250,7 @@ int main(int argc, char *argv[])
     if (proc->cur_id == PARENT_ID)
     {
         parent_work(proc, events_log_file);
+        
     }
     else
     {
@@ -260,5 +261,6 @@ int main(int argc, char *argv[])
     // print_history(all);
     fclose(pipes_log_file);
     fclose(events_log_file);
+    destroyPipeline(proc);
     return 0;
 }
