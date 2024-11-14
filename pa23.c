@@ -166,10 +166,73 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
     }
 }
 
+void set_parent(pipe_ut *proc, local_id size)
+{
+    proc->cur_id = PARENT_ID;
+    proc->size = size;
+}
+
+void create_child_processes(pipe_ut *proc, balance_t *balance)
+{
+    for (local_id i = 0; i < proc->size; i++)
+    {
+        if (i != PARENT_ID && proc->cur_id == PARENT_ID)
+        {
+            pid p = fork();
+            if (pid == 0)
+            {
+                proc->cur_id = i;
+                proc->state.s_balance = balance[i - 1];
+                proc->state.s_balance_pending_in = 0;
+                proc->history.s_history[0] = proc->state;
+                proc->history.s_history_len = 1;
+                proc->history.s_id = proc->cur_id;
+
+                log_started(proc, i);
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    if (argc < 3)
+    {
+        return -1;
+    }
+    if (strcmp(argv[1], "-p") != 0)
+    {
+        return -1;
+    }
+    process_num = atoi(argv[2]);
+    if (argc < 3 + process_num)
+        return -1;
 
+    balance_t *balance = malloc((n + 1) * sizeof(balance_t));
+    for (local_id i = 0; i < process_num; ++i)
+    {
+        balance[i + 1] = atoi(argv[3 + i]);
+    }
+    /*SOZDAT LOG*/
+    FILE *pipes_log_file = fopen(pipes_log, "w+t");
+    pipe_ut *proc = (pipe_ut *)malloc(sizeof(pipe_ut));
+    set_parent(proc, process_num);
+
+    pipe_ut *proc = create_pipes(pipes_log_file);
+    timestamp_t start_time = get_physical_time();
+
+    create_child_processes(proc, balance);
+
+    if (proc->cur_id == PARENT_ID)
+    {
+        parent_work(proc);
+    }
+    else
+    {
+        child_work(proc);
+    }
     // bank_robbery(parent_data);
+
     // print_history(all);
 
     return 0;
