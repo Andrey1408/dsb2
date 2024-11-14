@@ -101,12 +101,10 @@ void transfer_process(pipe_ut *pp, Message *msg)
 void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events_log_file)
 {
     printf("In child %d, in stop\n", pp->cur_id);
-    Message msg = create_message(DONE, NULL, 0);
-    send_multicast((void *)pp, &msg);
     int i = *processes_left_counter;
     for (int id = 1; i < pp->size - 2 || id < pp->size - 1; id++)
     {
-        printf("xd \n");
+        Message msg; 
         if (id != pp->cur_id)
         {
             int status = receive(pp, id, &msg);
@@ -115,29 +113,32 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
                 switch (msg.s_header.s_type)
                 {
                 case DONE:
+                printf("case done %d\n", pp->cur_id);
                     i++;
                     continue;
                 case TRANSFER:
+                printf("case transfer %d\n", pp->cur_id);
                     pp->state.s_time = get_physical_time();
                     transfer_process(pp, &msg);
                     id = 0;
                     continue;
                 default:
+                    printf("default broke in child stop");
                     break;
                 }
             }
         }
     }
-    msg = create_message(DONE, NULL, 0);
-    send_multicast((void *)pp, &msg);
+    Message msg_done = create_message(DONE, NULL, 0);
+    send_multicast((void *)pp, &msg_done);
     timestamp_t end_time = get_physical_time();
     pp->state = pp->history.s_history[pp->history.s_history_len - 1];
     pp->state.s_time = end_time;
     balance_history(&(pp->history), pp->state);
     log_done(pp->cur_id, events_log_file);
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
-    msg = create_message(BALANCE_HISTORY, &pp->history, p_size);
-    send(pp, PARENT_ID, &msg);
+    msg_done = create_message(BALANCE_HISTORY, &pp->history, p_size);
+    send(pp, PARENT_ID, &msg_done);
     exit(EXIT_SUCCESS);
 }
 
@@ -149,7 +150,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
     while (i < pp->size - 2)
     {
         receive_any(pp, &msg);
-        printf("child %d received: %d \n",pp->cur_id , msg.s_header.s_type);
+        printf("child %d received: %d \n", pp->cur_id, msg.s_header.s_type);
         switch (msg.s_header.s_type)
         {
         case TRANSFER:
@@ -163,6 +164,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
             i++;
             continue;
         default:
+            printf("default broke in child work");
             break;
         }
     }
@@ -251,7 +253,6 @@ int main(int argc, char *argv[])
     if (proc->cur_id == PARENT_ID)
     {
         parent_work(proc, events_log_file);
-        
     }
     else
     {
