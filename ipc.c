@@ -34,7 +34,7 @@ int receive(void *self, local_id from, Message *msg)
 {
     pipe_ut *proc = self;
     int status;
-    status = read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != -1 || read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len);
+    status = read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len);
     if (status > 0)
     {
         return 0;
@@ -56,11 +56,14 @@ int receive_any(void *self, Message *msg)
             {
                 if (receive(self, i, msg) == 1)
                 {
-                    continue;    
-                } else {
-                    break;
+                    continue;
+                }
+                else
+                {
+                    return 0;
                 }
             }
         }
     }
+    exit(EXIT_FAILURE);
 }

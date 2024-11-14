@@ -100,11 +100,13 @@ void transfer_process(pipe_ut *pp, Message *msg)
 
 void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events_log_file)
 {
+    printf("In child %d, in stop\n", pp->cur_id);
     Message msg = create_message(DONE, NULL, 0);
     send_multicast((void *)pp, &msg);
     int i = *processes_left_counter;
     for (int id = 1; i < pp->size - 2 || id < pp->size - 1; id++)
     {
+        printf("xd \n");
         if (id != pp->cur_id)
         {
             int status = receive(pp, id, &msg);
@@ -121,7 +123,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
                     id = 0;
                     continue;
                 default:
-                    continue;
+                    break;
                 }
             }
         }
@@ -146,9 +148,8 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
     int i = 0;
     while (i < pp->size - 2)
     {
-        Message msg;
         receive_any(pp, &msg);
-
+        printf("child %d received: %d \n",pp->cur_id , msg.s_header.s_type);
         switch (msg.s_header.s_type)
         {
         case TRANSFER:
@@ -162,7 +163,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
             i++;
             continue;
         default:
-            continue;
+            break;
         }
     }
 }
@@ -179,7 +180,7 @@ void parent_work(pipe_ut *pp, FILE *events_log_file)
     history.s_history_len = 0;
     while (history.s_history_len < pp->size - 1)
     {
-        Message msg;
+        printf("in parent receiving history\n");
         receive_any(pp, &msg);
         if (msg.s_header.s_type == BALANCE_HISTORY)
         {
@@ -242,7 +243,7 @@ int main(int argc, char *argv[])
     FILE *pipes_log_file = fopen(pipes_log, "w+t");
     FILE *events_log_file = fopen(events_log, "w+t");
     pipe_ut *proc = (pipe_ut *)malloc(sizeof(pipe_ut));
-    set_parent(proc, process_num);
+    set_parent(proc, process_num + 1);
 
     create_pipes(proc, pipes_log_file);
     create_child_processes(proc, balance, events_log_file);
