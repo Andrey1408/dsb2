@@ -7,7 +7,7 @@
 int send(void * self, local_id dst, const Message * msg) 
 {
     pipe_ut * proc = self;
-    if (write(proc->writer[proc->cur_id][dst], msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != -1) {
+    if (write(getWriterById(proc->cur_id, dst, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != -1) {
         return 0;
     }
     return -1;
@@ -30,7 +30,7 @@ int send_multicast(void * self, const Message * msg)
 int receive(void * self, local_id from, Message * msg) 
 {
     pipe_ut * proc = self;
-    if (read(proc->writer[proc->cur_id][from], msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != -1 || read(proc->writer[proc->cur_id][from], msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != 0) {
+    if (read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != -1 || read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len) != 0) {
         return 0;
     }
     return -1;

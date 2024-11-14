@@ -53,3 +53,15 @@ void close_read_pipe_ends(pipe_ut *proc)
         }
     }
 }
+
+int getWriterById(local_id self_id, local_id dest, pipe_ut *proc)
+{
+
+    return proc->recepients[self_id][dest][1];
+}
+
+int getReaderById(local_id self_id, local_id dest, pipe_ut *proc)
+{
+
+    return proc->recepients[self_id][dest][0];
+}
