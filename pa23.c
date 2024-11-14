@@ -17,12 +17,7 @@ void transfer(void * parent_data, local_id src, local_id dst,
         .s_amount = amount
     };
 
-    Message message;
-    message.s_header.s_magic = MESSAGE_MAGIC;
-    message.s_header.s_payload_len = sizeof(trnsfr);
-    message.s_header.s_type = TRANSFER;
-    message.s_header.s_local_time = get_physical_time();
-    memcpy(message.s_payload, &trnsfr, sizeof(trnsfr));
+    Message message = create_message(TRANSFER, (void*) &trnsfr, sizeof(trnsfr));
 
     while (1) {
         if (send(parent_data, src, &message ) == -1) {
@@ -82,7 +77,6 @@ Message create_message ( MessageType type, void* contents, uint16_t size )
     Message msg;
 
     msg.s_header.s_magic = MESSAGE_MAGIC;
-    msg.s_header.s_payload_len = 0;
     msg.s_header.s_type = type;
     msg.s_header.s_local_time = get_physical_time();
     msg.s_header.s_payload_len = size;
