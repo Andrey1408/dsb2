@@ -6,8 +6,9 @@ static const char *const log_pipe_open_fmt = "Pipe from process %d to %d was ope
 
 void log_started(FILE *events_log_file, local_id process_id)
 {
-    printf(log_started_fmt, get_physical_time(), process_id, getpid(), getppid());
-    fprintf(events_log_file, log_started_fmt, get_physical_time(), process_id, getpid(), getppid());
+    /* zaglushka na S*/
+    printf(log_started_fmt, get_physical_time(), process_id, getpid(), getppid(), 10);
+    fprintf(events_log_file, log_started_fmt, get_physical_time(), process_id, getpid(), getppid(), 10);
 }
 
 void log_received_all_started(FILE *events_log_file, local_id process_id)
@@ -18,9 +19,10 @@ void log_received_all_started(FILE *events_log_file, local_id process_id)
 
 void log_done(local_id process_id)
 {
+    /* zaglushka na S */
     FILE *events_log_file = fopen(events_log, "w+t");
-    printf(log_done_fmt, get_physical_time(), process_id);
-    fprintf(events_log_file, log_done_fmt, get_physical_time(), process_id);
+    printf(log_done_fmt, get_physical_time(), process_id, 10);
+    fprintf(events_log_file, log_done_fmt, get_physical_time(), process_id, 10);
 }
 
 void log_received_all_done(FILE *events_log_file, local_id process_id)
