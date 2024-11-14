@@ -9,8 +9,7 @@ typedef struct
 {
     local_id cur_id;
     local_id size;
-    int **reader;
-    int **writer;
+    int ***recepients;
     BalanceState state;
     BalanceHistory history;
 } pipe_ut;
