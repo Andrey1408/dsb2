@@ -6,6 +6,7 @@ LABEL lab.number="2"
 RUN apt-get update
 RUN apt-get -y --allow-unauthenticated install clang-3.5 \
 make
+RUN apt-get -y install valgrind
 
 RUN mkdir /app
 WORKDIR /app

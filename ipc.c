@@ -57,6 +57,8 @@ int receive_any(void *self, Message *msg)
                 if (receive(self, i, msg) == 1)
                 {
                     continue;    
+                } else {
+                    break;
                 }
             }
         }

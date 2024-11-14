@@ -8,8 +8,9 @@ void create_pipes(pipe_ut *proc, FILE *pipes_log_file)
         proc->recepients[i] = (int **)malloc(sizeof(int *) * proc->size);
         for (int j = 0; j < proc->size; j++)
         {
-            proc->recepients[i][j] = (int *)malloc(sizeof(int) * 2 * proc->size);
+            proc->recepients[i][j] = (int *)malloc(sizeof(int) * 2 * proc->size);           
             if (i != j)
+
             {
                 log_pipe(pipes_log_file, i, j, proc->recepients[i][j][0], proc->recepients[i][j][1]);
                 pipe(proc->recepients[i][j]);
