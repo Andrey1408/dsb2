@@ -98,7 +98,7 @@ void transfer_process(pipe_ut *pp, Message *msg)
     }
 }
 
-void child_stopping(pipe_ut *pp, const int *processes_left_counter)
+void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events_log_file)
 {
     Message msg = create_message(DONE, NULL, 0);
     send_multicast((void *)pp, &msg);
@@ -132,13 +132,13 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter)
     pp->state = pp->history.s_history[pp->history.s_history_len - 1];
     pp->state.s_time = end_time;
     balance_history(&(pp->history), pp->state);
-    log_done(pp->cur_id);
+    log_done(pp->cur_id, events_log_file);
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
     msg = create_message(BALANCE_HISTORY, &pp->history, p_size);
     send(pp, PARENT_ID, &msg);
 }
 
-void child_work(pipe_ut *pp)
+void child_work(pipe_ut *pp, FILE *events_log_file)
 {
     Message msg = create_message(STARTED, NULL, 0);
     send(pp, PARENT_ID, &msg);
@@ -155,7 +155,7 @@ void child_work(pipe_ut *pp)
             transfer_process(pp, &msg);
             continue;
         case STOP:
-            child_stopping(pp, &i);
+            child_stopping(pp, &i, events_log_file);
             break;
         case DONE:
             i++;
@@ -168,6 +168,7 @@ void child_work(pipe_ut *pp)
 
 int main(int argc, char *argv[])
 {
+
     // bank_robbery(parent_data);
     // print_history(all);
 

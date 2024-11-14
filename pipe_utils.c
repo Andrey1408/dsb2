@@ -60,3 +60,16 @@ int getReaderById(local_id self_id, local_id dest, pipe_ut *proc)
 
     return proc->recepients[self_id][dest][0];
 }
+
+void destroyPipeline(pipe_ut *proc)
+{
+    for (int i = 0; i < proc->size; i++)
+    {
+        for (int j = 0; j < proc->size; j++)
+        {
+            free(proc->recepients[i][j]);
+        }
+        free(proc->recepients[i]);
+    }
+    free(proc->recepients);
+}

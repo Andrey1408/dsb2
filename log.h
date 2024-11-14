@@ -15,7 +15,7 @@ void log_started(FILE *events_log_file, local_id process_id);
 
 void log_received_all_started(FILE *events_log_file, local_id process_id);
 
-void log_done(local_id process_id);
+void log_done(local_id process_id, FILE *events_log_file);
 
 void log_received_all_done(FILE *events_log_file, local_id process_id);
 

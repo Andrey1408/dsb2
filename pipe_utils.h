@@ -25,5 +25,6 @@ void close_write_pipe_ends(pipe_ut *proc);
 void close_read_pipe_ends(pipe_ut *proc);
 int getWriterById(local_id self_id, local_id dest, pipe_ut *proc);
 int getReaderById(local_id self_id, local_id dest, pipe_ut *proc);
+void destroyPipeline(pipe_ut *proc);
 
 #endif

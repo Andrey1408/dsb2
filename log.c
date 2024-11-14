@@ -17,10 +17,9 @@ void log_received_all_started(FILE *events_log_file, local_id process_id)
     fprintf(events_log_file, log_received_all_started_fmt, get_physical_time(), process_id);
 }
 
-void log_done(local_id process_id)
+void log_done(local_id process_id, FILE *events_log_file)
 {
     /* zaglushka na S */
-    FILE *events_log_file = fopen(events_log, "w+t");
     printf(log_done_fmt, get_physical_time(), process_id, 10);
     fprintf(events_log_file, log_done_fmt, get_physical_time(), process_id, 10);
 }
