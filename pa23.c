@@ -136,6 +136,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
     msg = create_message(BALANCE_HISTORY, &pp->history, p_size);
     send(pp, PARENT_ID, &msg);
+    exit;
 }
 
 void child_work(pipe_ut *pp, FILE *events_log_file)
@@ -245,8 +246,10 @@ int main(int argc, char *argv[])
 
     pipe_ut *proc = create_pipes(proc, pipes_log_file);
     timestamp_t start_time = get_physical_time();
+    FILE *events_log_file = fopen(events_log, "w+t");
 
     create_child_processes(proc, balance);
+
 
     if (proc->cur_id == PARENT_ID)
     {
@@ -259,6 +262,7 @@ int main(int argc, char *argv[])
     // bank_robbery(parent_data);
 
     // print_history(all);
-
+    fclose(pipes_log_file);
+    fclose(events_log_file);
     return 0;
 }
