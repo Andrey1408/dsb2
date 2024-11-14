@@ -136,7 +136,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
     uint16_t p_size = (pp->history.s_history_len) * sizeof(BalanceState) + sizeof(pp->history.s_history_len) + sizeof(pp->history.s_id);
     msg = create_message(BALANCE_HISTORY, &pp->history, p_size);
     send(pp, PARENT_ID, &msg);
-    exit;
+    exit(EXIT_SUCCESS);
 }
 
 void child_work(pipe_ut *pp, FILE *events_log_file)
@@ -166,29 +166,29 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
         }
     }
 }
-void parent_work(pipe_ut* pp, FILE *events_log_file) 
+void parent_work(pipe_ut *pp, FILE *events_log_file)
 {
     wait_messages(pp, STARTED);
-    log_received_all_started(pp, events_log_file);
+    log_received_all_started(events_log_file, pp->cur_id);
     bank_robbery(pp, pp->size - 1);
     Message msg = create_message(STOP, NULL, 0);
     send_multicast(pp, &msg);
     wait_messages(pp, DONE);
-    log_received_all_done(pp, events_log_file);
+    log_received_all_done(events_log_file, pp->cur_id);
     AllHistory history;
     history.s_history_len = 0;
-    while( history.s_history_len < pp->size - 1 ) {
+    while (history.s_history_len < pp->size - 1)
+    {
         Message msg;
-        receive_any( pp, &msg );
-        if( msg.s_header.s_type == BALANCE_HISTORY ) {
+        receive_any(pp, &msg);
+        if (msg.s_header.s_type == BALANCE_HISTORY)
+        {
             BalanceHistory temp;
             memcpy(&temp, &(msg.s_payload), sizeof(msg.s_payload));
             history.s_history[temp.s_id - 1] = temp;
             history.s_history_len++;
         }
     }
-
-
 }
 
 void set_parent(pipe_ut *proc, local_id size)
@@ -197,14 +197,14 @@ void set_parent(pipe_ut *proc, local_id size)
     proc->size = size;
 }
 
-void create_child_processes(pipe_ut *proc, balance_t *balance)
+void create_child_processes(pipe_ut *proc, balance_t *balance, FILE *log)
 {
     for (local_id i = 0; i < proc->size; i++)
     {
         if (i != PARENT_ID && proc->cur_id == PARENT_ID)
         {
-            pid p = fork();
-            if (pid == 0)
+            pid_t p = fork();
+            if (p == 0)
             {
                 proc->cur_id = i;
                 proc->state.s_balance = balance[i - 1];
@@ -212,8 +212,7 @@ void create_child_processes(pipe_ut *proc, balance_t *balance)
                 proc->history.s_history[0] = proc->state;
                 proc->history.s_history_len = 1;
                 proc->history.s_id = proc->cur_id;
-
-                log_started(proc, i);
+                log_started(log, proc->cur_id);
             }
         }
     }
@@ -233,7 +232,7 @@ int main(int argc, char *argv[])
     if (argc < 3 + process_num)
         return -1;
 
-    balance_t *balance = malloc((n + 1) * sizeof(balance_t));
+    balance_t *balance = malloc((process_num + 1) * sizeof(balance_t));
     for (local_id i = 0; i < process_num; ++i)
     {
         balance[i + 1] = atoi(argv[3 + i]);
@@ -244,12 +243,8 @@ int main(int argc, char *argv[])
     pipe_ut *proc = (pipe_ut *)malloc(sizeof(pipe_ut));
     set_parent(proc, process_num);
 
-    pipe_ut *proc = create_pipes(proc, pipes_log_file);
-    timestamp_t start_time = get_physical_time();
-    FILE *events_log_file = fopen(events_log, "w+t");
-
-    create_child_processes(proc, balance);
-
+    create_pipes(proc, pipes_log_file);
+    create_child_processes(proc, balance, events_log_file);
 
     if (proc->cur_id == PARENT_ID)
     {
