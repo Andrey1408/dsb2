@@ -189,6 +189,7 @@ void parent_work(pipe_ut *pp, FILE *events_log_file)
             history.s_history_len++;
         }
     }
+    print_history(&history);
 }
 
 void set_parent(pipe_ut *proc, local_id size)
