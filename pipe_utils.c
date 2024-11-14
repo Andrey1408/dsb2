@@ -20,6 +20,8 @@ void create_pipes(pipe_ut *proc, FILE *pipes_log_file)
             {
                 log_pipe(pipes_log_file, i, j, proc->recepients[i][j][0], proc->recepients[i][j][1]);
                 pipe(proc->recepients[i][j]);
+                fcntl(pipes[i][j][0], F_SETFL, O_NONBLOCK);
+                fcntl(pipes[i][j][1], F_SETFL, O_NONBLOCK);
             }
             else
             {

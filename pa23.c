@@ -21,15 +21,9 @@ void transfer(void * parent_data, local_id src, local_id dst,
 
     send(parent_data, src, &message);
 
-    log_transfer_out(&trnsfr);
-
     Message message_out;
     message_out.s_header.s_type = STARTED;
-    while (message_out.s_header.s_type != ACK) {
-        receive(parent_data, dst, &message_out);
-    }
 
-    log_transfer_in(&trnsfr);
 }
 
 void balance_history (BalanceHistory* history, BalanceState state) {
@@ -86,23 +80,35 @@ void transfer_process(pipe_ut* pp, Message* msg)
         pp->state.s_balance += trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         send(pp, trnsfr->s_dst, msg);
+        log_transfer_out(trnsfr);
     }
     if (pp->cur_id == trnsfr->s_src) {
         pp->state.s_balance -= trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         Message msg = create_message(ACK, NULL, 0);
         send(pp, PARENT_ID, &msg);
+        log_transfer_in(trnsfr);
     }
 }
 
 void child_stopping(pipe_ut* pp, const int* processes_left_counter){
     Message msg = create_message(DONE, NULL, 0);
     send_multicast((void*) pp, &msg);
-    close_write_pipe_ends_for_writers(pp);
     int i = *processes_left_counter;
 
-    while(i < pp->size - 2) {
-
+    for(int id = 1; i < pp->size - 2;id++) {
+        if(id != pp->cur_id){
+            receive(pp, id, &msg);
+            switch (msg.s_headr.s_type)
+            {
+            case DONE:
+                close(pp->recepients[pp->cur_id][id])
+                break;
+            
+            default:
+                break;
+            }
+        }
     }
 }
 
