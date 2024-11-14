@@ -165,6 +165,30 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
         }
     }
 }
+void parent_work(pipe_ut* pp, FILE *events_log_file) 
+{
+    wait_messages(pp, STARTED);
+    log_received_all_started(pp, events_log_file);
+    bank_robbery(pp, pp->size - 1);
+    Message msg = create_message(STOP, NULL, 0);
+    send_multicast(pp, &msg);
+    wait_messages(pp, DONE);
+    log_received_all_done(pp, events_log_file);
+    AllHistory history;
+    history.s_history_len = 0;
+    while( history.s_history_len < pp->size - 1 ) {
+        Message msg;
+        receive_any( pp, &msg );
+        if( msg.s_header.s_type == BALANCE_HISTORY ) {
+            BalanceHistory temp;
+            memcpy(&temp, &(msg.s_payload), sizeof(msg.s_payload));
+            history.s_history[temp.s_id - 1] = temp;
+            history.s_history_len++;
+        }
+    }
+
+
+}
 
 void set_parent(pipe_ut *proc, local_id size)
 {
@@ -204,7 +228,7 @@ int main(int argc, char *argv[])
     {
         return -1;
     }
-    process_num = atoi(argv[2]);
+    local_id process_num = atoi(argv[2]);
     if (argc < 3 + process_num)
         return -1;
 
@@ -215,21 +239,22 @@ int main(int argc, char *argv[])
     }
     /*SOZDAT LOG*/
     FILE *pipes_log_file = fopen(pipes_log, "w+t");
+    FILE *events_log_file = fopen(events_log, "w+t");
     pipe_ut *proc = (pipe_ut *)malloc(sizeof(pipe_ut));
     set_parent(proc, process_num);
 
-    pipe_ut *proc = create_pipes(pipes_log_file);
+    pipe_ut *proc = create_pipes(proc, pipes_log_file);
     timestamp_t start_time = get_physical_time();
 
     create_child_processes(proc, balance);
 
     if (proc->cur_id == PARENT_ID)
     {
-        parent_work(proc);
+        parent_work(proc, events_log_file);
     }
     else
     {
-        child_work(proc);
+        child_work(proc, events_log_file);
     }
     // bank_robbery(parent_data);
 
