@@ -22,17 +22,24 @@ Message create_message(MessageType type, void *contents, uint16_t size)
 void transfer(void *parent_data, local_id src, local_id dst,
               balance_t amount)
 {
-    TransferOrder trnsfr = {
-        .s_src = src,
-        .s_dst = dst,
-        .s_amount = amount};
+    TransferOrder *trnsfr = (TransferOrder *)malloc(sizeof(TransferOrder));
+    trnsfr->s_src = src;
+    trnsfr->s_dst = dst;
+    trnsfr->s_amount = amount;
+    printf("TRANSFER %d - %d SRC TO %d -%d DST %d - %d AMOUNT\n", src, trnsfr->s_src, dst, trnsfr->s_dst, (int) amount, (int)trnsfr->s_amount);
 
-    Message message = create_message(TRANSFER, (void *)&trnsfr, sizeof(trnsfr));
+    Message message = create_message(TRANSFER, (void *)trnsfr, sizeof(TransferOrder));
 
     send(parent_data, src, &message);
 
-    Message message_out;
-    message_out.s_header.s_type = STARTED;
+    Message msg_out;
+    msg_out.s_header.s_type = STARTED;
+
+    // Waiting for ACK from dst
+    while (msg_out.s_header.s_type != ACK)
+    {
+        receive(parent_data, dst, &msg_out);
+    }
 }
 
 void balance_history(BalanceHistory *history, BalanceState state)
@@ -81,20 +88,23 @@ void wait_messages(pipe_ut *pp, MessageType status)
 void transfer_process(pipe_ut *pp, Message *msg)
 {
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
-    if (pp->cur_id == trnsfr->s_dst)
+    if (pp->cur_id == trnsfr->s_src)
     {
+        printf("got src transfer %d to %d at %d\n", trnsfr->s_src, trnsfr->s_dst, pp->cur_id);
         pp->state.s_balance += trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         send(pp, trnsfr->s_dst, msg);
         log_transfer_out(trnsfr);
     }
-    if (pp->cur_id == trnsfr->s_src)
+    else
     {
+        printf("got dst transfer %d to %d at %d\n", trnsfr->s_src, trnsfr->s_dst, pp->cur_id);
         pp->state.s_balance -= trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         Message msg = create_message(ACK, NULL, 0);
         send(pp, PARENT_ID, &msg);
         log_transfer_in(trnsfr);
+        free(trnsfr);
     }
 }
 
@@ -104,7 +114,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
     int i = *processes_left_counter;
     for (int id = 1; i < pp->size - 2 || id < pp->size - 1; id++)
     {
-        Message msg; 
+        Message msg;
         if (id != pp->cur_id)
         {
             int status = receive(pp, id, &msg);
@@ -113,18 +123,18 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
                 switch (msg.s_header.s_type)
                 {
                 case DONE:
-                printf("case done %d\n", pp->cur_id);
+                    printf("case done %d\n", pp->cur_id);
                     i++;
                     continue;
                 case TRANSFER:
-                printf("case transfer %d\n", pp->cur_id);
+                    printf("case transfer %d\n", pp->cur_id);
                     pp->state.s_time = get_physical_time();
                     transfer_process(pp, &msg);
                     id = 0;
                     continue;
                 default:
-                    printf("default broke in child stop");
-                    break;
+                    printf("default broke in child stop %d\n", pp->cur_id);
+                    continue;
                 }
             }
         }
@@ -154,26 +164,29 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
         switch (msg.s_header.s_type)
         {
         case TRANSFER:
+            printf("child transfer %d\n", pp->cur_id);
             pp->state.s_time = get_physical_time();
             transfer_process(pp, &msg);
             continue;
         case STOP:
+            printf("child stopped %d\n", pp->cur_id);
             child_stopping(pp, &i, events_log_file);
             break;
         case DONE:
             i++;
             continue;
         default:
-            printf("default broke in child work");
-            break;
+            printf("default broke in child work %d\n", pp->cur_id);
+            continue;
         }
     }
+    exit(EXIT_FAILURE);
 }
 void parent_work(pipe_ut *pp, FILE *events_log_file)
 {
     wait_messages(pp, STARTED);
     log_received_all_started(events_log_file, pp->cur_id);
-    bank_robbery(pp, pp->size - 1);
+    bank_robbery(pp, pp->size);
     Message msg = create_message(STOP, NULL, 0);
     send_multicast(pp, &msg);
     wait_messages(pp, DONE);

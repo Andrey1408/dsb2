@@ -49,13 +49,15 @@ int receive_any(void *self, Message *msg)
 {
     pipe_ut *proc = self;
     while (1)
-    {
+    {   
+        printf("receive_any %d\n", proc->cur_id);
         for (local_id i = 0; i < proc->size; i++)
         {
             if (i != proc->cur_id)
             {
                 if (receive(self, i, msg) == 1)
-                {
+                {   
+                    sleep(1);
                     continue;
                 }
                 else
