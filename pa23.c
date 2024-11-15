@@ -22,13 +22,13 @@ Message create_message(MessageType type, void *contents, uint16_t size)
 void transfer(void *parent_data, local_id src, local_id dst,
               balance_t amount)
 {
-    TransferOrder *trnsfr = (TransferOrder *)malloc(sizeof(TransferOrder));
-    trnsfr->s_src = src;
-    trnsfr->s_dst = dst;
-    trnsfr->s_amount = amount;
-    printf("TRANSFER %d - %d SRC TO %d -%d DST %d - %d AMOUNT\n", src, trnsfr->s_src, dst, trnsfr->s_dst, (int) amount, (int)trnsfr->s_amount);
+    TransferOrder trnsfr;
+    trnsfr.s_src = src;
+    trnsfr.s_dst = dst;
+    trnsfr.s_amount = amount;
+    // printf("TRANSFER %d - %d SRC TO %d -%d DST %d - %d AMOUNT\n", src, trnsfr->s_src, dst, trnsfr->s_dst, (int) amount, (int)trnsfr->s_amount);
 
-    Message message = create_message(TRANSFER, (void *)trnsfr, sizeof(TransferOrder));
+    Message message = create_message(TRANSFER, (void *)&trnsfr, sizeof(TransferOrder));
 
     send(parent_data, src, &message);
 
@@ -90,7 +90,6 @@ void transfer_process(pipe_ut *pp, Message *msg)
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
     if (pp->cur_id == trnsfr->s_src)
     {
-        printf("got src transfer %d to %d at %d\n", trnsfr->s_src, trnsfr->s_dst, pp->cur_id);
         pp->state.s_balance += trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         send(pp, trnsfr->s_dst, msg);
@@ -98,7 +97,6 @@ void transfer_process(pipe_ut *pp, Message *msg)
     }
     else
     {
-        printf("got dst transfer %d to %d at %d\n", trnsfr->s_src, trnsfr->s_dst, pp->cur_id);
         pp->state.s_balance -= trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         Message msg = create_message(ACK, NULL, 0);
