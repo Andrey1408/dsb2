@@ -48,22 +48,16 @@ int receive(void *self, local_id from, Message *msg)
 int receive_any(void *self, Message *msg)
 {
     pipe_ut *proc = self;
-    while (1)
-    {
-        for (local_id i = 0; i < proc->size; i++)
+    for (local_id i = 0; i < proc->size; i++)
         {
             if (i != proc->cur_id)
             {
-                if (receive(self, i, msg) == 1)
-                {
-                    continue;
-                }
-                else
+                if (receive(self, i, msg) != 1)
                 {
                     return 0;
                 }
+                
             }
         }
-    }
-    exit(EXIT_FAILURE);
+    return -1;   
 }

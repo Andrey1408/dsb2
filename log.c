@@ -35,16 +35,14 @@ void log_pipe(FILE *pipes_log_file, local_id from, local_id to, int read, int wr
     fprintf(pipes_log_file, log_pipe_open_fmt, from, to, read, write);
 }
 
-void log_transfer_out(TransferOrder* trnsfr) 
+void log_transfer_out(TransferOrder* trnsfr, FILE *events_log_file) 
 {
-    FILE *events_log_file = fopen(events_log, "w+t");
     printf(log_transfer_out_fmt, get_physical_time(), trnsfr->s_dst, trnsfr->s_amount, trnsfr->s_src);
     fprintf(events_log_file, log_transfer_out_fmt, get_physical_time(), trnsfr->s_dst, trnsfr->s_amount, trnsfr->s_src);
 }
 
-void log_transfer_in(TransferOrder* trnsfr) 
+void log_transfer_in(TransferOrder* trnsfr, FILE *events_log_file) 
 {
-    FILE *events_log_file = fopen(events_log, "w+t");
     printf(log_transfer_in_fmt, get_physical_time(), trnsfr->s_dst, trnsfr->s_amount, trnsfr->s_src);
     fprintf(events_log_file, log_transfer_in_fmt, get_physical_time(), trnsfr->s_dst, trnsfr->s_amount, trnsfr->s_src);
 }
