@@ -79,7 +79,7 @@ void wait_messages(pipe_ut *pp, MessageType status)
     }
 }
 
-void transfer_process(pipe_ut *pp, Message *msg)
+void transfer_process(pipe_ut *pp, Message *msg, FILE* events_log_file)
 {
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
     if (pp->cur_id == trnsfr->s_src)
@@ -87,7 +87,7 @@ void transfer_process(pipe_ut *pp, Message *msg)
         pp->state.s_balance += trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
         send(pp, trnsfr->s_dst, msg);
-        log_transfer_out(trnsfr);
+        log_transfer_out(trnsfr, events_log_file);
     }
     else
     {
@@ -95,7 +95,7 @@ void transfer_process(pipe_ut *pp, Message *msg)
         balance_history(&(pp->history), pp->state);
         Message msg = create_message(ACK, NULL, 0);
         send(pp, PARENT_ID, &msg);
-        log_transfer_in(trnsfr);
+        log_transfer_in(trnsfr, events_log_file);
         free(trnsfr);
     }
 }

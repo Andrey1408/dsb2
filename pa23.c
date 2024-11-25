@@ -21,7 +21,7 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
                 case TRANSFER:
                     printf("case transfer %d\n", pp->cur_id);
                     pp->state.s_time = get_physical_time();
-                    transfer_process(pp, &msg);
+                    transfer_process(pp, &msg, events_log_file);
                     id = 0;
                     continue;
                 default:
@@ -58,7 +58,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
         case TRANSFER:
             printf("child transfer %d\n", pp->cur_id);
             pp->state.s_time = get_physical_time();
-            transfer_process(pp, &msg);
+            transfer_process(pp, &msg, events_log_file);
             continue;
         case STOP:
             printf("child stopped %d\n", pp->cur_id);
@@ -74,6 +74,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
     }
     exit(EXIT_FAILURE);
 }
+
 void parent_work(pipe_ut *pp, FILE *events_log_file)
 {
     wait_messages(pp, STARTED);
