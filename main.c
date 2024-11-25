@@ -3,6 +3,7 @@
 #include "message_logic.h"
 #include "log.h"
 #include "banking.h"
+#include "pa23.h"
 #include <stdlib.h>
 #include <string.h>
 
