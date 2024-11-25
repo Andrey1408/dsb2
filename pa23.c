@@ -87,7 +87,6 @@ void transfer_process(pipe_ut *pp, Message *msg, FILE *events_log_file)
 {
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
     if (pp->cur_id == trnsfr->s_src)
-    if (pp->cur_id == trnsfr->s_src)
     {
         pp->state.s_balance += trnsfr->s_amount;
         balance_history(&(pp->history), pp->state);
