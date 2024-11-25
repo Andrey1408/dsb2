@@ -22,12 +22,13 @@ Message create_message(MessageType type, void *contents, uint16_t size)
 void transfer(void *parent_data, local_id src, local_id dst,
               balance_t amount)
 {
-    TransferOrder trnsfr = {
-        .s_src = src,
-        .s_dst = dst,
-        .s_amount = amount};
+    TransferOrder trnsfr;
+    trnsfr.s_src = src;
+    trnsfr.s_dst = dst;
+    trnsfr.s_amount = amount;
+    // printf("TRANSFER %d - %d SRC TO %d -%d DST %d - %d AMOUNT\n", src, trnsfr->s_src, dst, trnsfr->s_dst, (int) amount, (int)trnsfr->s_amount);
 
-    Message message = create_message(TRANSFER, (void *)&trnsfr, sizeof(trnsfr));
+    Message message = create_message(TRANSFER, (void *)&trnsfr, sizeof(TransferOrder));
 
     send(parent_data, src, &message);
 
@@ -85,6 +86,7 @@ void wait_messages(pipe_ut *pp, MessageType status)
 void transfer_process(pipe_ut *pp, Message *msg, FILE *events_log_file)
 {
     TransferOrder *trnsfr = (TransferOrder *)msg->s_payload;
+    if (pp->cur_id == trnsfr->s_src)
     if (pp->cur_id == trnsfr->s_src)
     {
         pp->state.s_balance += trnsfr->s_amount;
@@ -146,7 +148,7 @@ void parent_work(pipe_ut *pp, FILE *events_log_file)
 {
     wait_messages(pp, STARTED);
     log_received_all_started(events_log_file, pp->cur_id);
-    bank_robbery(pp, pp->size - 1);
+    bank_robbery(pp, pp->size);
     Message msg = create_message(STOP, NULL, 0);
     send_multicast(pp, &msg);
     wait_messages(pp, DONE);

@@ -33,8 +33,11 @@ int send_multicast(void *self, const Message *msg)
 int receive(void *self, local_id from, Message *msg)
 {
     pipe_ut *proc = self;
-    int status;
-    status = read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader) + msg->s_header.s_payload_len);
+    int status = read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader));
+    if(status <= 0){
+        return 1;
+    }
+    status = read(getReaderById(proc->cur_id, from, proc), msg->s_payload, msg->s_header.s_payload_len);
     if (status > 0)
     {
         return 0;
