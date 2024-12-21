@@ -43,9 +43,6 @@ int main(int argc, char *argv[])
     {
         child_work(proc, events_log_file);
     }
-    // bank_robbery(parent_data);
-
-    // print_history(all);
     fclose(pipes_log_file);
     fclose(events_log_file);
     destroyPipeline(proc);

@@ -46,19 +46,22 @@ void child_stopping(pipe_ut *pp, const int *processes_left_counter, FILE *events
 
 void child_work(pipe_ut *pp, FILE *events_log_file)
 {
-    Message msg = create_message(STARTED, NULL, 0);
-    send(pp, PARENT_ID, &msg);
+    Message* msg = malloc(sizeof(Message));
+    *msg = create_message(STARTED, NULL, 0);
+    send(pp, PARENT_ID, msg);
     int i = 0;
     while (i < pp->size - 2)
     {
-        receive_any(pp, &msg);
-        printf("child %d received: %d \n", pp->cur_id, msg.s_header.s_type);
-        switch (msg.s_header.s_type)
+        if(receive_any(pp, msg) == 1){
+            *msg = create_message(STARTED, NULL, 0);
+        }
+        printf("child %d received: %d \n", pp->cur_id, msg->s_header.s_type);
+        switch (msg->s_header.s_type)
         {
         case TRANSFER:
             printf("child transfer %d\n", pp->cur_id);
             pp->state.s_time = get_physical_time();
-            transfer_process(pp, &msg, events_log_file);
+            transfer_process(pp, msg, events_log_file);
             continue;
         case STOP:
             printf("child stopped %d\n", pp->cur_id);
@@ -69,6 +72,7 @@ void child_work(pipe_ut *pp, FILE *events_log_file)
             continue;
         default:
             printf("default broke in child work %d\n", pp->cur_id);
+            sleep(1);
             continue;
         }
     }

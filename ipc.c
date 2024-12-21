@@ -34,10 +34,14 @@ int receive(void *self, local_id from, Message *msg)
 {
     pipe_ut *proc = self;
     int status = read(getReaderById(proc->cur_id, from, proc), msg, sizeof(MessageHeader));
-    if(status <= 0){
+    if (status <= 0)
+    {
         return 1;
     }
     status = read(getReaderById(proc->cur_id, from, proc), msg->s_payload, msg->s_header.s_payload_len);
+    void *bin = malloc(sizeof(MAX_PAYLOAD_LEN - msg->s_header.s_payload_len));
+    read(getReaderById(proc->cur_id, from, proc), bin, MAX_PAYLOAD_LEN - msg->s_header.s_payload_len);
+    free(bin);
     if (status > 0)
     {
         return 0;
@@ -52,15 +56,18 @@ int receive_any(void *self, Message *msg)
 {
     pipe_ut *proc = self;
     for (local_id i = 0; i < proc->size; i++)
+    {
+        if (i != proc->cur_id)
         {
-            if (i != proc->cur_id)
+            if (receive(self, i, msg) != 1)
             {
-                if (receive(self, i, msg) != 1)
-                {
-                    return 0;
-                }
-                
+                return 0;
+            }
+            else
+            {
+                continue;
             }
         }
-    return -1;   
+    }
+    return 1;
 }
