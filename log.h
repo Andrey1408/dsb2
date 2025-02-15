@@ -1,28 +1,16 @@
-#ifndef CUSTOM_LOG_DSB2
-#define CUSTOM_LOG_DSB2
+#ifndef LOG_H
+#define LOG_H
 
-#include "pa2345.h"
-#include "common.h"
-#include "ipc.h"
-#include "banking.h"
-#include "pipe_utils.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include "banking.h"
+#include "pa2345.h"
 
-void log_started(FILE *events_log_file, local_id process_id);
-
+void log_started(FILE *events_log_file, local_id process_id, balance_t balance);
 void log_received_all_started(FILE *events_log_file, local_id process_id);
-
-void log_done(local_id process_id, FILE *events_log_file);
-
+void log_done(FILE *events_log_file, local_id process_id, balance_t balance);
 void log_received_all_done(FILE *events_log_file, local_id process_id);
-
 void log_pipe(FILE *pipes_log_file, local_id from, local_id to, int read, int write);
+void log_transfer_out(FILE *events_log_file, TransferOrder *trnsfr);
+void log_transfer_in(FILE *events_log_file, TransferOrder *trnsfr);
 
-void log_transfer_out( TransferOrder* trnsfr, FILE *events_log_file );
-
-void log_transfer_in( TransferOrder* trnsfr, FILE *events_log_file );
-
-#endif
+#endif // LOG_H

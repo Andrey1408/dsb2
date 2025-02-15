@@ -1,74 +1,54 @@
 #include "pipe_utils.h"
+#include "common.h"
+#include "log.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-void create_pipes(pipe_ut *proc, FILE *pipes_log_file)
-{
-    proc->recepients = (int ***)malloc(sizeof(int **) * proc->size);
-    for (int i = 0; i < proc->size; i++)
-    {
-        proc->recepients[i] = (int **)malloc(sizeof(int *) * proc->size);
-        for (int j = 0; j < proc->size; j++)
-        {
-            proc->recepients[i][j] = (int *)malloc(sizeof(int) * 2 * proc->size);           
-            if (i != j)
+Pipeline* create_pipeline(int process_count) {
+    Pipeline *p = malloc(sizeof(Pipeline));
+    p->size_value = process_count;
+    p->size = &(p->size_value);
+    FILE *pipes_log_file = fopen(pipes_log, "w");
 
-            {
-                log_pipe(pipes_log_file, i, j, proc->recepients[i][j][0], proc->recepients[i][j][1]);
-                pipe(proc->recepients[i][j]);
-                fcntl(proc->recepients[i][j][0], F_SETFL, O_NONBLOCK);
-                fcntl(proc->recepients[i][j][1], F_SETFL, O_NONBLOCK);
+    for (int i = 0; i < process_count; i++) {
+        for (int j = 0; j < process_count; j++) {
+            if (i == j) {
+                p->pipes[i][j][0] = -1;
+                p->pipes[i][j][1] = -1;
+                continue;
             }
-            else
-            {
-                proc->recepients[i][j][0] = -1;
-                proc->recepients[i][j][1] = -1;
+            if (pipe(p->pipes[i][j]) < 0) {
+                perror("pipe");
+            }
+            log_pipe(pipes_log_file, i, j, p->pipes[i][j][0], p->pipes[i][j][1]);
+        }
+    }
+    fclose(pipes_log_file);
+    return p;
+}
+
+void close_unused_pipes(Pipeline *p, local_id self) {
+    int total = p->size_value;
+    for (int i = 0; i < total; i++) {
+        for (int j = 0; j < total; j++) {
+            if (i == j) continue;
+            if (self == i) {
+                close(p->pipes[i][j][0]);
+            } else if (self == j) {
+                close(p->pipes[i][j][1]);
+            } else {
+                close(p->pipes[i][j][0]);
+                close(p->pipes[i][j][1]);
             }
         }
     }
 }
 
-void close_write_pipe_ends(pipe_ut *proc)
-{
-    for (local_id j = 0; j < proc->size; j++)
-    {
-        if (proc->cur_id != j)
-        {
-            close(proc->recepients[proc->cur_id][j][1]);
-        }
-    }
+int getReaderById(local_id from, local_id to, Pipeline *p) {
+    return p->pipes[from][to][0];
 }
 
-void close_read_pipe_ends(pipe_ut *proc)
-{
-    for (local_id j = 0; j < proc->size; j++)
-    {
-        if (proc->cur_id != j)
-        {
-            close(proc->recepients[proc->cur_id][j][0]);
-        }
-    }
-}
-
-int getWriterById(local_id self_id, local_id dest, pipe_ut *proc)
-{
-
-    return proc->recepients[self_id][dest][1];
-}
-
-int getReaderById(local_id self_id, local_id from, pipe_ut *proc)
-{
-
-    return proc->recepients[from][self_id][0];
-}
-
-void destroyPipeline(pipe_ut *proc)
-{
-    for (int i = 0; i < proc->size; i++)
-    {
-        for (int j = 0; j < proc->size; j++)
-        {
-            free(proc->recepients[i][j]);
-        }
-        free(proc->recepients[i]);
-    }
-    free(proc->recepients);
+int getWriterById(local_id from, local_id to, Pipeline *p) {
+    return p->pipes[from][to][1];
 }

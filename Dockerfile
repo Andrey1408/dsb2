@@ -11,4 +11,4 @@ RUN apt-get -y install valgrind
 RUN mkdir /app
 WORKDIR /app
 COPY ./ /app
-# RUN make run
+RUN make all
