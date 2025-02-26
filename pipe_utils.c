@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 Pipeline* create_pipeline(int process_count) {
     Pipeline *p = malloc(sizeof(Pipeline));
@@ -20,6 +21,9 @@ Pipeline* create_pipeline(int process_count) {
             }
             if (pipe(p->pipes[i][j]) < 0) {
                 perror("pipe");
+            }
+            if (fcntl(p->pipes[i][j][0], F_SETFL, O_NONBLOCK) < 0 || fcntl(p->pipes[i][j][1], F_SETFL, O_NONBLOCK) < 0) {
+                perror("fcntl");
             }
             log_pipe(pipes_log_file, i, j, p->pipes[i][j][0], p->pipes[i][j][1]);
         }
