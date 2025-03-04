@@ -30,9 +30,6 @@ void update_history(Account *account) {
     }
 }
 
-//---------------------------------------------------------------------
-// Функция transfer() вызывается процессом «К» (родительским) при выполнении bank_robbery().
-// Передаётся parent_data (структура Process), src – id процесса-отправителя, dst – id получателя, amount – сумма перевода.
 void transfer(void *parent_data, local_id src, local_id dst, balance_t amount) {
     ProcessPtr proc = (ProcessPtr)parent_data;
 
@@ -57,9 +54,6 @@ void transfer(void *parent_data, local_id src, local_id dst, balance_t amount) {
     }
 }
 
-//---------------------------------------------------------------------
-// Основная функция лабораторной работы (файл pa23.c).
-// Командная строка: ./pa2 -p <child_count> <balance1> <balance2> ... <balanceN>
 int main(int argc, char *argv[]) {
     int child_count = 0;
     int arg_index = 1;
@@ -71,13 +65,17 @@ int main(int argc, char *argv[]) {
     }
 
     int process_count = child_count + 1;
-    FILE *events_log_file = fopen(events_log, "w");
+    FILE *events_log_file = fopen(events_log, "a"); // Открытие в режиме добавления
+    if (!events_log_file) {
+        perror("fopen events.log");
+        exit(1);
+    }
 
     Pipeline *pipeline = create_pipeline(process_count);
     pid_t pids[process_count];
     pids[0] = getpid();
 
-    // Форкаем дочерние процессы
+    // Форкаем дочерние процессы (процессы типа "С")
     for (int i = 1; i < process_count; i++) {
         pid_t pid = fork();
         if (pid < 0) {
@@ -92,18 +90,21 @@ int main(int argc, char *argv[]) {
             account.balance = (balance_t)atoi(argv[arg_index + i - 1]);
             account.history.s_id = my_id;
             account.history.s_history_len = 0;
-            update_history(&account);
+            update_history(&account);  // Записываем начальное состояние (время 0)
 
             printf("[Child %d] STARTED с балансом: $%d\n", my_id, account.balance);
             fflush(stdout);
 
+            // Отправляем сообщение STARTED всем
             Message msg;
+            memset(&msg, 0, sizeof(msg));
             msg.s_header.s_magic = MESSAGE_MAGIC;
             msg.s_header.s_type = STARTED;
             msg.s_header.s_payload_len = 0;
             msg.s_header.s_local_time = get_physical_time();
             send_multicast(proc, &msg);
 
+            // Ждем STARTED от всех других дочерних процессов
             for (local_id src = 1; src < process_count; src++) {
                 if (src == my_id) continue;
                 Message rmsg;
@@ -114,9 +115,25 @@ int main(int argc, char *argv[]) {
             printf("[Child %d] Получил все STARTED\n", my_id);
             fflush(stdout);
 
-            // Ожидание сообщений и обработка транзакций
+            // Переменная для отслеживания последнего зафиксированного времени
+            timestamp_t last_update_time = get_physical_time();
+
+            // Основной цикл обработки сообщений
             int stop_received = 0;
             while (!stop_received) {
+                // Периодически обновляем историю, даже если сообщений нет
+                timestamp_t cur_time = get_physical_time();
+                if (cur_time > last_update_time) {
+                    for (timestamp_t t = last_update_time + 1; t <= cur_time && account.history.s_history_len < MAX_T; t++) {
+                        BalanceState *state = &account.history.s_history[account.history.s_history_len];
+                        state->s_time = t;
+                        state->s_balance = account.balance;
+                        state->s_balance_pending_in = 0;
+                        account.history.s_history_len++;
+                    }
+                    last_update_time = cur_time;
+                }
+
                 Message rmsg;
                 if (receive_any(proc, &rmsg) == 0) {
                     if (rmsg.s_header.s_type == TRANSFER) {
@@ -126,35 +143,53 @@ int main(int argc, char *argv[]) {
                         if (my_id == order.s_src) {
                             account.balance -= order.s_amount;
                             printf("[Child %d] Отправил $%d -> %d\n", my_id, order.s_amount, order.s_dst);
+                            fflush(stdout);
                             send(proc, order.s_dst, &rmsg);
+                            update_history(&account);
+                            last_update_time = get_physical_time();
                         } else if (my_id == order.s_dst) {
                             account.balance += order.s_amount;
                             printf("[Child %d] Получил $%d от %d\n", my_id, order.s_amount, order.s_src);
+                            fflush(stdout);
                             Message ack;
+                            memset(&ack, 0, sizeof(ack));
                             ack.s_header.s_magic = MESSAGE_MAGIC;
                             ack.s_header.s_type = ACK;
                             ack.s_header.s_payload_len = 0;
                             ack.s_header.s_local_time = get_physical_time();
                             send(proc, 0, &ack);
+                            update_history(&account);
+                            last_update_time = get_physical_time();
                         }
-                        update_history(&account);
                     } else if (rmsg.s_header.s_type == STOP) {
                         stop_received = 1;
                     }
                 }
             }
 
+            // После получения STOP – дополнительно заполняем историю до текущего времени
+            timestamp_t current_time = get_physical_time();
+            for (timestamp_t t = last_update_time + 1; t <= current_time && account.history.s_history_len < MAX_T; t++) {
+                BalanceState *state = &account.history.s_history[account.history.s_history_len];
+                state->s_time = t;
+                state->s_balance = account.balance;
+                state->s_balance_pending_in = 0;
+                account.history.s_history_len++;
+            }
+
             printf("[Child %d] Отправляет DONE, баланс: $%d\n", my_id, account.balance);
             fflush(stdout);
 
             Message done;
+            memset(&done, 0, sizeof(done));
             done.s_header.s_magic = MESSAGE_MAGIC;
             done.s_header.s_type = DONE;
             done.s_header.s_payload_len = 0;
             done.s_header.s_local_time = get_physical_time();
             send_multicast(proc, &done);
-
+ 
             Message hist_msg;
+            memset(&hist_msg, 0, sizeof(hist_msg));
             hist_msg.s_header.s_magic = MESSAGE_MAGIC;
             hist_msg.s_header.s_type = BALANCE_HISTORY;
             hist_msg.s_header.s_payload_len = sizeof(BalanceHistory);
@@ -168,6 +203,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Код родительского процесса (процесс "К")
     local_id my_id = 0;
     close_unused_pipes(pipeline, my_id);
     ProcessPtr proc = createProcess(my_id, process_count, pipeline);
@@ -187,6 +223,7 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
 
     Message stop_msg;
+    memset(&stop_msg, 0, sizeof(stop_msg));
     stop_msg.s_header.s_magic = MESSAGE_MAGIC;
     stop_msg.s_header.s_type = STOP;
     stop_msg.s_header.s_payload_len = 0;
@@ -209,7 +246,9 @@ int main(int argc, char *argv[]) {
         if (receive(proc, src, &rmsg) != 0) {
             fprintf(stderr, "[Parent] Ошибка получения BALANCE_HISTORY от %d\n", src);
         } else {
-            memcpy(&all_history.s_history[src], rmsg.s_payload, sizeof(BalanceHistory));
+            memcpy(&all_history.s_history[src - 1], rmsg.s_payload, sizeof(BalanceHistory));
+            printf("[Parent] Получен BALANCE_HISTORY от %d\n", src);
+            fflush(stdout);
         }
     }
     print_history(&all_history);
